@@ -27,7 +27,7 @@ class AddEditCategoryView extends GetView<CategoryController> {
               const SizedBox(height: 10),
               Obx(
                 () => DropdownButtonFormField<String>(
-                  value: controller.selectedType.value,
+                  initialValue: controller.selectedType.value,
                   items: ['income', 'expense']
                       .map(
                         (e) => DropdownMenuItem(

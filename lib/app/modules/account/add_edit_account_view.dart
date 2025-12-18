@@ -35,7 +35,7 @@ class AddEditAccountView extends GetView<AccountController> {
               const SizedBox(height: 10),
               Obx(
                 () => DropdownButtonFormField<String>(
-                  value: controller.selectedType.value,
+                  initialValue: controller.selectedType.value,
                   items: ['Cash', 'Bank', 'E-Wallet', 'Card']
                       .map((e) => DropdownMenuItem(value: e, child: Text(e)))
                       .toList(),

@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'account_controller.dart';
 import 'add_edit_account_view.dart';
 import '../../utils/formatters.dart';
+import '../../utils/icon_helper.dart';
 
 class AccountView extends GetView<AccountController> {
   const AccountView({super.key});
@@ -23,7 +24,7 @@ class AccountView extends GetView<AccountController> {
                     leading: CircleAvatar(
                       backgroundColor: Color(account.color),
                       child: Icon(
-                        IconData(account.icon, fontFamily: 'MaterialIcons'),
+                        IconHelper.getIcon(account.icon),
                         color: Colors.white,
                       ),
                     ),

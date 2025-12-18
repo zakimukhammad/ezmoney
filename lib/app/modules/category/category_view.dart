@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'category_controller.dart';
 import 'add_edit_category_view.dart';
+import '../../utils/icon_helper.dart';
 
 class CategoryView extends GetView<CategoryController> {
   const CategoryView({super.key});
@@ -22,7 +23,7 @@ class CategoryView extends GetView<CategoryController> {
                     leading: CircleAvatar(
                       backgroundColor: Color(category.color),
                       child: Icon(
-                        IconData(category.icon, fontFamily: 'MaterialIcons'),
+                        IconHelper.getIcon(category.icon),
                         color: Colors.white,
                       ),
                     ),

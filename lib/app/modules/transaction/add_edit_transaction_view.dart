@@ -70,7 +70,7 @@ class AddEditTransactionView extends GetView<TransactionController> {
               // Account Selection (Source)
               Obx(
                 () => DropdownButtonFormField<int>(
-                  value: controller.selectedAccountId.value,
+                  initialValue: controller.selectedAccountId.value,
                   items: controller.accounts
                       .map(
                         (e) =>
@@ -92,7 +92,7 @@ class AddEditTransactionView extends GetView<TransactionController> {
                 () => Visibility(
                   visible: controller.selectedType.value == 'transfer',
                   child: DropdownButtonFormField<int>(
-                    value: controller.selectedTransferAccountId.value,
+                    initialValue: controller.selectedTransferAccountId.value,
                     items: controller.accounts
                         .where(
                           (e) => e.id != controller.selectedAccountId.value,
@@ -116,7 +116,7 @@ class AddEditTransactionView extends GetView<TransactionController> {
                 () => Visibility(
                   visible: controller.selectedType.value != 'transfer',
                   child: DropdownButtonFormField<int>(
-                    value: controller.selectedCategoryId.value,
+                    initialValue: controller.selectedCategoryId.value,
                     items: controller.categories
                         .map(
                           (e) => DropdownMenuItem(
