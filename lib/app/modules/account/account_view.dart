@@ -4,6 +4,7 @@ import 'account_controller.dart';
 import 'add_edit_account_view.dart';
 import '../../utils/formatters.dart';
 import '../../utils/icon_helper.dart';
+import '../account_type/account_type_view.dart';
 
 class AccountView extends GetView<AccountController> {
   const AccountView({super.key});
@@ -11,7 +12,16 @@ class AccountView extends GetView<AccountController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Accounts')),
+      appBar: AppBar(
+        title: const Text('Accounts'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.category),
+            onPressed: () => Get.to(() => const AccountTypeView()),
+            tooltip: 'Manage Account Types',
+          ),
+        ],
+      ),
       body: Obx(
         () => controller.accounts.isEmpty
             ? Center(child: Text("No accounts found"))

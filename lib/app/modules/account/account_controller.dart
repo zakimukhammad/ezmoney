@@ -2,16 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../data/models/account_model.dart';
 import '../../data/providers/account_provider.dart';
+import '../../data/providers/account_type_provider.dart';
 
 class AccountController extends GetxController {
   final AccountProvider provider = AccountProvider();
+  final AccountTypeProvider typeProvider = AccountTypeProvider();
   final accounts = <Account>[].obs;
+  final availableAccountTypes = <String>[].obs;
 
   // Form handling
   final formKey = GlobalKey<FormState>();
   final nameController = TextEditingController();
   final balanceController = TextEditingController();
-  final selectedType = 'Cash'.obs;
+  final selectedType =
+      ''.obs; // Empty initially, will bet set after loading types
   final selectedColor = 0xFF2196F3.obs; // Blue default
   final selectedIcon = 0xe04f.obs; // wallet icon
 
@@ -19,6 +23,21 @@ class AccountController extends GetxController {
   void onInit() {
     super.onInit();
     loadAccounts();
+    loadAccountTypes();
+  }
+
+  void loadAccountTypes() async {
+    var types = await typeProvider.getAllAccountTypes();
+    if (types.isNotEmpty) {
+      availableAccountTypes.assignAll(types.map((e) => e.name).toList());
+      if (selectedType.value.isEmpty) {
+        selectedType.value = availableAccountTypes.first;
+      }
+    } else {
+      // Fallback if no types found (shouldn't happen due to migration seeding)
+      availableAccountTypes.assignAll(['Cash', 'Bank']);
+      selectedType.value = 'Cash';
+    }
   }
 
   void loadAccounts() async {
@@ -68,7 +87,9 @@ class AccountController extends GetxController {
   void resetForm() {
     nameController.clear();
     balanceController.clear();
-    selectedType.value = 'Cash';
+    if (availableAccountTypes.isNotEmpty) {
+      selectedType.value = availableAccountTypes.first;
+    }
   }
 
   void populateForm(Account account) {

@@ -20,7 +20,7 @@ class DatabaseProvider {
     String path = join(documentsDirectory.path, "EzMoney.db");
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onOpen: (db) {},
       onCreate: (Database db, int version) async {
         await db.execute(
@@ -57,7 +57,31 @@ class DatabaseProvider {
           "created_at TEXT"
           ")",
         );
+
+        await _createAccountTypeTable(db);
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          await _createAccountTypeTable(db);
+        }
       },
     );
+  }
+
+  Future<void> _createAccountTypeTable(Database db) async {
+    await db.execute(
+      "CREATE TABLE AccountType ("
+      "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+      "name TEXT UNIQUE"
+      ")",
+    );
+
+    // Seed default data
+    final batch = db.batch();
+    batch.insert('AccountType', {'name': 'Cash'});
+    batch.insert('AccountType', {'name': 'Bank'});
+    batch.insert('AccountType', {'name': 'E-Wallet'});
+    batch.insert('AccountType', {'name': 'Card'});
+    await batch.commit();
   }
 }
