@@ -19,6 +19,23 @@ class AccountController extends GetxController {
   final selectedColor = 0xFF2196F3.obs; // Blue default
   final selectedIcon = 0xe04f.obs; // wallet icon
 
+  Map<String, List<Account>> get groupedAccounts {
+    final grouped = <String, List<Account>>{};
+    for (var account in accounts) {
+      if (!grouped.containsKey(account.type)) {
+        grouped[account.type] = [];
+      }
+      grouped[account.type]!.add(account);
+    }
+    return grouped;
+  }
+
+  double getGroupTotal(String type) {
+    return accounts
+        .where((a) => a.type == type)
+        .fold(0.0, (sum, item) => sum + item.balance);
+  }
+
   @override
   void onInit() {
     super.onInit();

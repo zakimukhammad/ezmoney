@@ -22,49 +22,91 @@ class AccountView extends GetView<AccountController> {
           ),
         ],
       ),
-      body: Obx(
-        () => controller.accounts.isEmpty
-            ? Center(child: Text("No accounts found"))
-            : ListView.separated(
-                itemCount: controller.accounts.length,
-                separatorBuilder: (context, index) => Divider(),
-                itemBuilder: (context, index) {
-                  final account = controller.accounts[index];
-                  return ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: Color(account.color),
-                      child: Icon(
-                        IconHelper.getIcon(account.icon),
-                        color: Colors.white,
+      body: Obx(() {
+        if (controller.accounts.isEmpty) {
+          return const Center(child: Text("No accounts found"));
+        }
+        final grouped = controller.groupedAccounts;
+        return ListView.builder(
+          itemCount: grouped.keys.length,
+          itemBuilder: (context, index) {
+            String type = grouped.keys.elementAt(index);
+            List<dynamic> accounts = grouped[type]!;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        type,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey,
+                        ),
                       ),
-                    ),
-                    title: Text(account.name),
-                    subtitle: Text(account.type),
-                    trailing: Text(
-                      CurrencyFormatter.format(account.balance),
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    onTap: () {
-                      controller.populateForm(account);
-                      Get.to(() => AddEditAccountView(account: account));
-                    },
-                    onLongPress: () {
-                      Get.defaultDialog(
-                        title: "Delete Account",
-                        middleText:
-                            "Are you sure you want to delete this account?",
-                        textConfirm: "Delete",
-                        textCancel: "Cancel",
-                        onConfirm: () {
-                          controller.deleteAccount(account.id!);
-                          Get.back();
-                        },
-                      );
-                    },
-                  );
-                },
-              ),
-      ),
+                      Text(
+                        CurrencyFormatter.format(
+                          controller.getGroupTotal(type),
+                        ),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                ListView.separated(
+                  physics: const NeverScrollableScrollPhysics(),
+                  shrinkWrap: true,
+                  itemCount: accounts.length,
+                  separatorBuilder: (context, index) => const Divider(),
+                  itemBuilder: (context, i) {
+                    final account = accounts[i];
+                    return ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: Color(account.color),
+                        child: Icon(
+                          IconHelper.getIcon(account.icon),
+                          color: Colors.white,
+                        ),
+                      ),
+                      title: Text(account.name),
+                      subtitle: Text(account.type),
+                      trailing: Text(
+                        CurrencyFormatter.format(account.balance),
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      onTap: () {
+                        controller.populateForm(account);
+                        Get.to(() => AddEditAccountView(account: account));
+                      },
+                      onLongPress: () {
+                        Get.defaultDialog(
+                          title: "Delete Account",
+                          middleText:
+                              "Are you sure you want to delete this account?",
+                          textConfirm: "Delete",
+                          textCancel: "Cancel",
+                          onConfirm: () {
+                            controller.deleteAccount(account.id!);
+                            Get.back();
+                          },
+                        );
+                      },
+                    );
+                  },
+                ),
+              ],
+            );
+          },
+        );
+      }),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           controller.resetForm();
