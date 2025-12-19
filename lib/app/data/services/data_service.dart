@@ -19,13 +19,26 @@ class DataService {
     // We'll try to write to ExternalStorageDirectory or ApplicationDocumentsDirectory.
 
     if (Platform.isAndroid) {
-      var status = await Permission.storage.request();
+      // Check for Manage External Storage (Android 11+)
+      var status = await Permission.manageExternalStorage.status;
       if (!status.isGranted) {
-        Get.snackbar(
-          "Permission Denied",
-          "Storage permission is required to export.",
-        );
-        return;
+        status = await Permission.manageExternalStorage.request();
+      }
+
+      // If Manage Storage not granted (or not applicable), try basic Storage
+      if (!status.isGranted) {
+        var storageStatus = await Permission.storage.status;
+        if (!storageStatus.isGranted) {
+          storageStatus = await Permission.storage.request();
+        }
+
+        if (!storageStatus.isGranted) {
+          Get.snackbar(
+            "Permission Denied",
+            "Storage permission is required to export to Downloads/Documents.",
+          );
+          return;
+        }
       }
     }
 
