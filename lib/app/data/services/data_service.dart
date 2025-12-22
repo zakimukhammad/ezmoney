@@ -6,9 +6,10 @@ import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../providers/transaction_provider.dart';
-import '../models/transaction_model.dart';
+
 import '../providers/account_provider.dart';
 import '../providers/db_provider.dart';
+import 'package:sqflite/sqflite.dart';
 
 class DataService {
   final TransactionProvider _txProvider = TransactionProvider();
@@ -125,46 +126,65 @@ class DataService {
       var bytes = file.readAsBytesSync();
       var excel = Excel.decodeBytes(bytes);
 
-      int count = 0;
+      final db = await DatabaseProvider.db.database;
 
-      // Pre-fetch for mapping
-      var accounts = await _accProvider.getAllAccounts();
-      if (accounts.isEmpty) return; // Cannot import without accounts
-      int defaultAccountId = accounts.first.id!;
+      // Order matters for Foreign Keys: AccountType -> Category -> Account -> Transaction
+      // Although SQLite fk constraints might not be strictly enforced unless enabled, logic dictates this order.
+      final tables = ['AccountType', 'Category', 'Account', 'Transaction'];
 
-      for (var table in excel.tables.keys) {
-        if (table == 'Transactions') {
-          var rows = excel.tables[table]!.rows;
-          if (rows.isEmpty) continue;
+      int totalInserted = 0;
+
+      for (var tableName in tables) {
+        if (excel.tables.keys.contains(tableName)) {
+          var tableSheet = excel.tables[tableName];
+          if (tableSheet == null || tableSheet.rows.isEmpty) continue;
+
+          var rows = tableSheet.rows;
+          // First row is headers
+          var headers = rows.first
+              .map((e) => e?.value?.toString() ?? '')
+              .toList();
+
+          if (headers.isEmpty) continue;
 
           for (int i = 1; i < rows.length; i++) {
             var row = rows[i];
-            try {
-              String date =
-                  row[1]?.value?.toString() ?? DateTime.now().toIso8601String();
-              String type = row[2]?.value?.toString() ?? 'expense';
-              double amount =
-                  double.tryParse(row[3]?.value?.toString() ?? '0') ?? 0.0;
-              String note = row[4]?.value?.toString() ?? '';
+            Map<String, dynamic> rowData = {};
 
-              final tx = TransactionModel(
-                accountId: defaultAccountId, // Default to first account
-                amount: amount,
-                date: date,
-                note: note,
-                type: type,
-                createdAt: DateTime.now().toIso8601String(),
-              );
+            for (int k = 0; k < headers.length; k++) {
+              if (k < row.length) {
+                var cellValue = row[k]?.value;
+                // Handle basic types if needed, though sqflite handles dynamic well usually.
+                // We might need to ensure 'id' is treated as such if we want to keep it,
+                // but usually auto-increment will override if we don't force it.
+                // If we want to RESTORE exactly, we should insert the ID too.
+                rowData[headers[k]] = cellValue;
+              }
+            }
 
-              await _txProvider.addTransaction(tx);
-              count++;
-            } catch (e) {
-              print("Error parsing row: $e");
+            if (rowData.isNotEmpty) {
+              try {
+                // specific conflict handling could be added here
+                await db.insert(
+                  tableName,
+                  rowData,
+                  conflictAlgorithm: ConflictAlgorithm.replace,
+                );
+                totalInserted++;
+              } catch (e) {
+                print("Error inserting into $tableName: $e");
+              }
             }
           }
         }
       }
-      Get.snackbar("Import Completed", "Imported $count transactions");
+      Get.snackbar(
+        "Import Completed",
+        "Processed $totalInserted records across all tables.",
+      );
+      // Refresh providers to show new data
+      _txProvider.getAllTransactions();
+      _accProvider.getAllAccounts();
     }
   }
 }

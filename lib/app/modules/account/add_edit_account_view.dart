@@ -35,7 +35,7 @@ class AddEditAccountView extends GetView<AccountController> {
               const SizedBox(height: 10),
               Obx(
                 () => DropdownButtonFormField<String>(
-                  value: controller.selectedType.value.isNotEmpty
+                  initialValue: controller.selectedType.value.isNotEmpty
                       ? controller.selectedType.value
                       : null,
                   items: controller.availableAccountTypes
