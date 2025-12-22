@@ -8,24 +8,20 @@ import 'package:permission_handler/permission_handler.dart';
 import '../providers/transaction_provider.dart';
 import '../models/transaction_model.dart';
 import '../providers/account_provider.dart';
+import '../providers/db_provider.dart';
 
 class DataService {
   final TransactionProvider _txProvider = TransactionProvider();
   final AccountProvider _accProvider = AccountProvider();
 
   Future<void> exportToExcel() async {
-    // Request permission (mostly for Android < 11 or generic storage access)
-    // For modern Android, scoped storage or Documents/Downloads is better.
-    // We'll try to write to ExternalStorageDirectory or ApplicationDocumentsDirectory.
-
+    // Request permission
     if (Platform.isAndroid) {
-      // Check for Manage External Storage (Android 11+)
       var status = await Permission.manageExternalStorage.status;
       if (!status.isGranted) {
         status = await Permission.manageExternalStorage.request();
       }
 
-      // If Manage Storage not granted (or not applicable), try basic Storage
       if (!status.isGranted) {
         var storageStatus = await Permission.storage.status;
         if (!storageStatus.isGranted) {
@@ -43,26 +39,59 @@ class DataService {
     }
 
     var excel = Excel.createExcel();
-    Sheet sheet = excel['Transactions'];
+    // We will rename/delete default sheet later or just let it be if we use it.
+    // Excel pkg usually starts with 'Sheet1'.
 
-    // Headers
-    sheet.appendRow([
-      TextCellValue('ID'),
-      TextCellValue('Date'),
-      TextCellValue('Type'),
-      TextCellValue('Amount'),
-      TextCellValue('Note'),
-    ]);
+    final db = await DatabaseProvider.db.database;
+    final tables = ['Transaction', 'Account', 'Category', 'AccountType'];
 
-    var transactions = await _txProvider.getAllTransactions();
-    for (var tx in transactions) {
-      sheet.appendRow([
-        IntCellValue(tx.id!),
-        TextCellValue(tx.date),
-        TextCellValue(tx.type),
-        DoubleCellValue(tx.amount),
-        TextCellValue(tx.note),
-      ]);
+    // Track if we wrote any data to avoid saving empty file if something goes wrong
+    bool hasData = false;
+
+    for (var tableName in tables) {
+      var data = await db.query(tableName);
+      if (data.isNotEmpty) {
+        hasData = true;
+        // Create/Get sheet
+        // excel[tableName] creates it if it doesn't exist
+        Sheet sheet = excel[tableName];
+
+        // Headers (keys from first row)
+        List<String> headers = data.first.keys.toList();
+
+        // Convert headers to TextCellValue
+        List<CellValue> headerCells = headers
+            .map((h) => TextCellValue(h))
+            .toList();
+        sheet.appendRow(headerCells);
+
+        // Data
+        for (var row in data) {
+          List<CellValue> rowCells = headers.map((h) {
+            var value = row[h];
+            if (value == null) return TextCellValue('');
+            if (value is int) return IntCellValue(value);
+            if (value is double) return DoubleCellValue(value);
+            return TextCellValue(value.toString());
+          }).toList();
+          sheet.appendRow(rowCells);
+        }
+      }
+    }
+
+    // Remove the default 'Sheet1' if it's empty and we created others,
+    // but the library behavior on deleting the only sheet might be tricky.
+    // For safety, if we have our own sheets, we can try to delete 'Sheet1' if it exists and is empty.
+    // However, simplicity first: just leave it or rename it if used.
+    // If 'Transaction' was valid, it created 'Transaction' sheet. 'Sheet1' remains.
+    // Let's remove 'Sheet1' if it exists and is not in our tables list.
+    if (excel.sheets.containsKey('Sheet1') && !tables.contains('Sheet1')) {
+      excel.delete('Sheet1');
+    }
+
+    if (!hasData) {
+      Get.snackbar("Export Empty", "No data found to export in any table.");
+      return;
     }
 
     // Save
@@ -70,7 +99,7 @@ class DataService {
     if (fileBytes != null) {
       String? directory;
       if (Platform.isAndroid) {
-        directory = "/storage/emulated/0/Download"; // Direct to Downloads
+        directory = "/storage/emulated/0/Download";
       } else {
         directory = (await getApplicationDocumentsDirectory()).path;
       }

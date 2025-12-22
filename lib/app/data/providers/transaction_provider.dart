@@ -5,7 +5,7 @@ class TransactionProvider {
   Future<List<TransactionModel>> getAllTransactions() async {
     final db = await DatabaseProvider.db.database;
     var res = await db.query(
-      "Transaction",
+      "'Transaction'",
       orderBy: "date DESC, created_at DESC",
     );
     List<TransactionModel> list = res.isNotEmpty
