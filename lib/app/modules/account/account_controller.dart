@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../data/models/account_model.dart';
+import '../../data/models/transaction_model.dart';
 import '../../data/providers/account_provider.dart';
 import '../../data/providers/account_type_provider.dart';
+import '../../data/providers/transaction_provider.dart';
 
 class AccountController extends GetxController {
   final AccountProvider provider = AccountProvider();
   final AccountTypeProvider typeProvider = AccountTypeProvider();
+  final TransactionProvider transactionProvider = TransactionProvider();
   final accounts = <Account>[].obs;
   final availableAccountTypes = <String>[].obs;
 
@@ -81,6 +84,9 @@ class AccountController extends GetxController {
 
   Future<void> updateAccount(Account account) async {
     if (formKey.currentState!.validate()) {
+      // Get the old balance before updating
+      final oldBalance = account.balance;
+
       account.name = nameController.text;
       account.type = selectedType.value;
       account.icon = selectedIcon.value;
@@ -89,7 +95,36 @@ class AccountController extends GetxController {
           double.tryParse(balanceController.text.replaceAll(',', '')) ??
           account.balance;
 
+      // Calculate the difference
+      final newBalance = account.balance;
+      final difference = newBalance - oldBalance;
+
+      // Update the account first
       await provider.updateAccount(account);
+
+      // If there's a balance change, record it as a transaction
+      if (difference != 0) {
+        final now = DateTime.now();
+        final dateOnly = DateTime(
+          now.year,
+          now.month,
+          now.day,
+        ).toIso8601String().split('T')[0];
+
+        final transaction = TransactionModel(
+          accountId: account.id!,
+          categoryId: null, // No category for balance adjustments
+          transferAccountId: null,
+          amount: difference.abs(),
+          date: dateOnly,
+          note: 'Difference',
+          type: difference > 0 ? 'income' : 'expense',
+          createdAt: DateTime.now().toIso8601String(),
+        );
+
+        await transactionProvider.addTransaction(transaction);
+      }
+
       loadAccounts();
       Get.back();
       resetForm();
